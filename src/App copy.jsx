@@ -1,7 +1,7 @@
 import * as React from "react";
 import axios from "axios";
-import styles from './App.module.css';
-import styled from 'styled-components';
+import styles from "./App.module.css";
+import styled from "styled-components";
 
 const storiesReducer = (state, action) => {
   switch (action.type) {
@@ -28,7 +28,7 @@ const storiesReducer = (state, action) => {
       return {
         ...state,
         data: state.data.filter(
-          (story) => action.payload.objectID !== story.objectID,
+          (story) => action.payload.objectID !== story.objectID
         ),
       };
     default:
@@ -38,7 +38,7 @@ const storiesReducer = (state, action) => {
 
 const useStorageState = (key, initialState) => {
   const [value, setValue] = React.useState(
-    localStorage.getItem(key) || initialState,
+    localStorage.getItem(key) || initialState
   );
 
   React.useEffect(() => {
@@ -132,12 +132,15 @@ const SearchForm = ({ searchTerm, onSearchInput, onSearchSubmit }) => (
       value={searchTerm}
       isFocused
       onInputChange={onSearchInput}
-     
     >
       <strong>Search:</strong>
     </InputWithLabel>
 
-    <button type="submit" disabled={!searchTerm} className={`${styles.button} ${styles.buttonLarge}`}>
+    <button
+      type="submit"
+      disabled={!searchTerm}
+      className={`${styles.button} ${styles.buttonLarge}`}
+    >
       Submit
     </button>
   </form>
@@ -161,7 +164,9 @@ const InputWithLabel = ({
 
   return (
     <>
-      <label htmlFor={id} className="label">{children}</label>
+      <label htmlFor={id} className="label">
+        {children}
+      </label>
       &nbsp;
       <input
         ref={inputRef}
@@ -182,27 +187,24 @@ const List = ({ list, onRemoveItem }) => (
     ))}
   </ul>
 );
-const Item = ({item, onRemoveItem}) =>
-(
-<li className="item">
-<span style={{ width:"40%"}}>
-<a href={item.url}>{item.title}</a>
-</span>
-<span style={{ width:"30%"}
-}
->
-{item
-.author
-} </span>
-<span style={{ width:"10%"}}>
-{item.num_comments}</span>
-<span style={{ width:"10%"}}>
-{item.points}</span>
-<span style={{ width:"10%"}}>
-  
-  <button type="button" onClick={() => onRemoveItem(item)} className={`${styles.button} ${styles.buttonSmall}`}>Dismiss</button>
-</span>
-</li>
+const Item = ({ item, onRemoveItem }) => (
+  <li className="item">
+    <span style={{ width: "40%" }}>
+      <a href={item.url}>{item.title}</a>
+    </span>
+    <span style={{ width: "30%" }}>{item.author} </span>
+    <span style={{ width: "10%" }}>{item.num_comments}</span>
+    <span style={{ width: "10%" }}>{item.points}</span>
+    <span style={{ width: "10%" }}>
+      <button
+        type="button"
+        onClick={() => onRemoveItem(item)}
+        className={`${styles.button} ${styles.buttonSmall}`}
+      >
+        Dismiss
+      </button>
+    </span>
+  </li>
 );
 
 /*const Item = ({ item, onRemoveItem }) => (

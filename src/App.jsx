@@ -3,62 +3,56 @@ import axios from "axios";
 import styled from "styled-components";
 
 const StyledContainer = styled.div`
-height: 100vw;
-padding: 20px;
-background: #83a4d4;
-background: linear-gradient(to left,
-#b6fbff, #83a4d4);
-color: #171212;
+  height: 100vw;
+  padding: 20px;
+  background: #83a4d4;
+  background: linear-gradient(to left, #b6fbff, #83a4d4);
+  color: #171212;
 `;
-const StyledHeadlinePrimary =styled.h1`
-font-size: 48px;
-font-weight: 300;
-letter-spacing: 2px;
+const StyledHeadlinePrimary = styled.h1`
+  font-size: 48px;
+  font-weight: 300;
+  letter-spacing: 2px;
 `;
 const StyledItem = styled.li`
-display: flex;
-align-items: center;
-padding-bottom: 5px;
+  display: flex;
+  align-items: center;
+  padding-bottom: 5px;
 `;
 const StyledColumn = styled.span`
-padding: 0 5px;
-white-space: nowrap;
-overflow: hidden;
-white-space: nowrap;
-text-overflow: ellipsis;
-a {
-color: inherit;
-}
-width: ${(props) => props.width};
+  padding: 0 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  a {
+    color: inherit;
+  }
+  width: ${(props) => props.width};
 `;
-const StyledButton =
-styled.button`
-background: transparent;
-border: 1px solid #171212;
-padding: 5px;
-cursor: pointer;
-transition: all 0.1s ease-in;
-&:hover {
-background: #171212;
-color: #ffffff;
-}
+const StyledButton = styled.button`
+  background: transparent;
+  border: 1px solid #171212;
+  padding: 5px;
+  cursor: pointer;
+  transition: all 0.1s ease-in;
+  &:hover {
+    background: #171212;
+    color: #ffffff;
+  }
 `;
-const StyledButtonSmall =
-styled(StyledButton)`
-padding: 5px;
+const StyledButtonSmall = styled(StyledButton)`
+  padding: 5px;
 `;
-const StyledButtonLarge =
-styled(StyledButton)`
-padding: 10px;
+const StyledButtonLarge = styled(StyledButton)`
+  padding: 10px;
 `;
-const StyledSearchForm = 
-styled.form`
-padding: 10px 0 20px 0;
-display: flex;
-align-items: baseline;
+const StyledSearchForm = styled.form`
+  padding: 10px 0 20px 0;
+  display: flex;
+  align-items: baseline;
 `;
-const StyledLabel= 
-styled.label`
+const StyledLabel = styled.label`
 border
 -top: 1px solid #171212;
 border
@@ -68,8 +62,7 @@ padding
 font
 -size: 24px;
 `;
-const StyledInput= 
-styled.input`
+const StyledInput = styled.input`
 border: none;
 border
 -bottom: 1px solid #171212;
@@ -104,27 +97,40 @@ const storiesReducer = (state, action) => {
       return {
         ...state,
         data: state.data.filter(
-          (story) => action.payload.objectID !== story.objectID,
+          (story) => action.payload.objectID !== story.objectID
         ),
       };
     default:
       throw new Error();
   }
 };
+/* -------------------- */
 
 const useStorageState = (key, initialState) => {
+  const isMounted = React.useRef(false);
   const [value, setValue] = React.useState(
-    localStorage.getItem(key) || initialState,
+    localStorage.getItem(key) || initialState
   );
 
   React.useEffect(() => {
-    localStorage.setItem(key, value);
+    if (!isMounted.current) {
+      isMounted.current = true;
+      console.log("test A ");
+    } else if (isMounted.current) {
+      console.log("A");
+      localStorage.setItem(key, value);
+    }
   }, [value, key]);
 
   return [value, setValue];
 };
-
+/* ---------------------- */
 const API_ENDPOINT = "https://hn.algolia.com/api/v1/search?query=";
+console.log("B:App");
+const getSumComments = (stories) => {
+  console.log("C");
+  return stories.data.reduce((result, value) => result + value.num_comments, 0);
+};
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useStorageState("search", "React");
@@ -136,6 +142,7 @@ const App = () => {
     isLoading: false,
     isError: false,
   });
+  const sumComments = React.useMemo(() => getSumComments(stories), [stories]);
 
   const handleFetchStories = React.useCallback(async () => {
     dispatchStories({ type: "STORIES_FETCH_INIT" });
@@ -161,12 +168,12 @@ const App = () => {
     handleFetchStories();
   }, [handleFetchStories]);
 
-  const handleRemoveStory = (item) => {
+  const handleRemoveStory = React.useCallback((item) => {
     dispatchStories({
       type: "REMOVE_STORY",
       payload: item,
     });
-  };
+  }, []);
 
   const handleSearchInput = (event) => {
     setSearchTerm(event.target.value);
@@ -180,7 +187,9 @@ const App = () => {
 
   return (
     <StyledContainer>
-      <StyledHeadlinePrimary>My Hacker Stories</StyledHeadlinePrimary>
+      <StyledHeadlinePrimary>
+        My Hacker Stories {sumComments}
+      </StyledHeadlinePrimary>
 
       <SearchForm
         searchTerm={searchTerm}
@@ -249,12 +258,15 @@ const InputWithLabel = ({
   );
 };
 
-const List = ({ list, onRemoveItem }) => (
-  <ul>
-    {list.map((item) => (
-      <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
-    ))}
-  </ul>
+const List = React.memo(
+  ({ list, onRemoveItem }) =>
+    console.log("B:List") || (
+      <ul>
+        {list.map((item) => (
+          <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+        ))}
+      </ul>
+    )
 );
 
 const Item = ({ item, onRemoveItem }) => (
@@ -274,3 +286,7 @@ const Item = ({ item, onRemoveItem }) => (
 );
 
 export default App;
+export { storiesReducer,
+  SearchForm, InputWithLabel,
+  List, Item };
+  
