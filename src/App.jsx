@@ -1,6 +1,7 @@
 import * as React from "react";
 import axios from "axios";
 import styled from "styled-components";
+import orderBy from 'lodash/orderBy'; // Importez la fonction orderBy de Lodash
 
 const StyledContainer = styled.div`
   height: 100vw;
@@ -9,16 +10,19 @@ const StyledContainer = styled.div`
   background: linear-gradient(to left, #b6fbff, #83a4d4);
   color: #171212;
 `;
+
 const StyledHeadlinePrimary = styled.h1`
   font-size: 48px;
   font-weight: 300;
   letter-spacing: 2px;
 `;
+
 const StyledItem = styled.li`
   display: flex;
   align-items: center;
   padding-bottom: 5px;
 `;
+
 const StyledColumn = styled.span`
   padding: 0 5px;
   white-space: nowrap;
@@ -30,6 +34,7 @@ const StyledColumn = styled.span`
   }
   width: ${(props) => props.width};
 `;
+
 const StyledButton = styled.button`
   background: transparent;
   border: 1px solid #171212;
@@ -41,35 +46,33 @@ const StyledButton = styled.button`
     color: #ffffff;
   }
 `;
+
 const StyledButtonSmall = styled(StyledButton)`
   padding: 5px;
 `;
+
 const StyledButtonLarge = styled(StyledButton)`
   padding: 10px;
 `;
+
 const StyledSearchForm = styled.form`
   padding: 10px 0 20px 0;
   display: flex;
   align-items: baseline;
 `;
+
 const StyledLabel = styled.label`
-border
--top: 1px solid #171212;
-border
--left: 1px solid #171212;
-padding
--left: 5px;
-font
--size: 24px;
+  border-top: 1px solid #171212;
+  border-left: 1px solid #171212;
+  padding-left: 5px;
+  font-size: 24px;
 `;
+
 const StyledInput = styled.input`
-border: none;
-border
--bottom: 1px solid #171212;
-background
--color: transparent;
-font
--size: 24px;
+  border: none;
+  border-bottom: 1px solid #171212;
+  background-color: transparent;
+  font-size: 24px;
 `;
 
 const storiesReducer = (state, action) => {
@@ -104,7 +107,7 @@ const storiesReducer = (state, action) => {
       throw new Error();
   }
 };
-/* -------------------- */
+
 
 const useStorageState = (key, initialState) => {
   const isMounted = React.useRef(false);
@@ -124,25 +127,38 @@ const useStorageState = (key, initialState) => {
 
   return [value, setValue];
 };
-/* ---------------------- */
+
 const API_ENDPOINT = "https://hn.algolia.com/api/v1/search?query=";
-console.log("B:App");
-const getSumComments = (stories) => {
-  console.log("C");
-  return stories.data.reduce((result, value) => result + value.num_comments, 0);
-};
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useStorageState("search", "React");
-
   const [url, setUrl] = React.useState(`${API_ENDPOINT}${searchTerm}`);
+  const [urls, setUrls] = useStorageState("urls", []); 
+  const [currentUrl, setCurrentUrl] = useStorageState("currentUrl", ""); 
+  const lastFiveUrls = urls.slice(Math.max(urls.length - 5, 0));
+   
+ const addUrl = (newUrl) => {
+    setUrls((prevUrls) => [...prevUrls, newUrl]);
+    setCurrentUrl(newUrl);
+    setUrl(newUrl); 
+  };
+const navigateToUrl = (selectedUrl) => {
+  setCurrentUrl(selectedUrl);
+  setSearchTerm(selectedUrl);
+  setUrl(`${API_ENDPOINT}${selectedUrl}`);
+};
 
   const [stories, dispatchStories] = React.useReducer(storiesReducer, {
     data: [],
     isLoading: false,
     isError: false,
   });
-  const sumComments = React.useMemo(() => getSumComments(stories), [stories]);
+  const [sortBy, setSortBy] = React.useState({ key: "", order: "" });
+  const [sortFunction, setSortFunction] = React.useState(null);
+
+  const sumComments = React.useMemo(() => {
+    return stories.data.reduce((result, value) => result + value.num_comments, 0);
+  }, [stories]);
 
   const handleFetchStories = React.useCallback(async () => {
     dispatchStories({ type: "STORIES_FETCH_INIT" });
@@ -181,9 +197,35 @@ const App = () => {
 
   const handleSearchSubmit = (event) => {
     setUrl(`${API_ENDPOINT}${searchTerm}`);
-
     event.preventDefault();
   };
+const handleAddSearch = () => {
+  addUrl(searchTerm);
+};
+
+  const handleSort = (key) => {
+    const order = sortBy.key === key && sortBy.order === "asc" ? "desc" : "asc";
+    setSortBy({ key, order });
+
+    const sortingFunction = (a, b) => {
+      if (key === "title" || key === "author") {
+        const aValue = a[key].toLowerCase();
+        const bValue = b[key].toLowerCase();
+        return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      } else {
+        return order === "asc" ? a[key] - b[key] : b[key] - a[key];
+      }
+    };
+
+    setSortFunction(() => sortingFunction);
+  };
+
+  const sortedList = React.useMemo(() => {
+    if (sortFunction) {
+      return [...stories.data].sort(sortFunction);
+    }
+    return stories.data;
+  }, [stories.data, sortFunction]);
 
   return (
     <StyledContainer>
@@ -195,22 +237,37 @@ const App = () => {
         searchTerm={searchTerm}
         onSearchInput={handleSearchInput}
         onSearchSubmit={handleSearchSubmit}
+        addUrl={handleAddSearch}
+        lastFiveUrls={lastFiveUrls}
+        navigateToUrl={navigateToUrl}
+        url={url}
       />
 
       <hr />
+
+      <SortButtons onSort={handleSort} />
 
       {stories.isError && <p>Something went wrong ...</p>}
 
       {stories.isLoading ? (
         <p>Loading ...</p>
       ) : (
-        <List list={stories.data} onRemoveItem={handleRemoveStory} />
+        <List list={sortedList} onRemoveItem={handleRemoveStory} />
       )}
     </StyledContainer>
   );
 };
 
-const SearchForm = ({ searchTerm, onSearchInput, onSearchSubmit }) => (
+const SortButtons = ({ onSort }) => (
+<div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
+    <StyledButtonSmall onClick={() => onSort("title")}>Title</StyledButtonSmall>
+    <StyledButtonSmall onClick={() => onSort("author")}>Author</StyledButtonSmall>
+    <StyledButtonSmall onClick={() => onSort("num_comments")}>Comments</StyledButtonSmall>
+    <StyledButtonSmall onClick={() => onSort("points")}>Points</StyledButtonSmall>
+  </div>
+);
+
+const SearchForm = ({ searchTerm, onSearchInput, onSearchSubmit ,addUrl, lastFiveUrls, navigateToUrl, url }) => (
   <StyledSearchForm onSubmit={onSearchSubmit}>
     <InputWithLabel
       id="search"
@@ -221,9 +278,20 @@ const SearchForm = ({ searchTerm, onSearchInput, onSearchSubmit }) => (
       <strong>Search:</strong>
     </InputWithLabel>
 
-    <StyledButtonLarge type="submit" disabled={!searchTerm}>
+    <StyledButtonLarge type="submit" onClick={addUrl} disabled={!searchTerm}>
       Submit
     </StyledButtonLarge>
+     {Array.isArray(lastFiveUrls) &&
+  lastFiveUrls.map((term, index) => (
+    <StyledButtonSmall key={index} onClick={() => navigateToUrl(term)}>
+      {term}
+    </StyledButtonSmall>
+  ))}
+
+
+
+
+
   </StyledSearchForm>
 );
 
@@ -258,16 +326,13 @@ const InputWithLabel = ({
   );
 };
 
-const List = React.memo(
-  ({ list, onRemoveItem }) =>
-    console.log("B:List") || (
-      <ul>
-        {list.map((item) => (
-          <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
-        ))}
-      </ul>
-    )
-);
+const List = React.memo(({ list, onRemoveItem }) => (
+  <ul>
+    {list.map((item) => (
+      <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+    ))}
+  </ul>
+));
 
 const Item = ({ item, onRemoveItem }) => (
   <StyledItem>
@@ -286,7 +351,10 @@ const Item = ({ item, onRemoveItem }) => (
 );
 
 export default App;
-export { storiesReducer,
-  SearchForm, InputWithLabel,
-  List, Item };
-  
+export {
+  storiesReducer,
+  SearchForm,
+  InputWithLabel,
+  List,
+  Item,
+};
